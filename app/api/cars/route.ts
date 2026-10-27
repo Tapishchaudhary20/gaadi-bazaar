@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { z } from "zod";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+const listing = z.object({ title: z.string().min(5).max(120), make: z.string().min(1), model: z.string().min(1), year: z.coerce.number().int().min(1900).max(2030), price: z.coerce.number().int().positive(), mileage: z.coerce.number().int().nonnegative(), location: z.string().min(2), transmission: z.string(), fuel: z.string(), images: z.string().min(8), description: z.string().min(10).max(4000) });
+export async function POST(request: Request) { const session = await getServerSession(authOptions); if (!session?.user?.email) return NextResponse.redirect(new URL("/login?callbackUrl=/sell", request.url)); const parsed = listing.safeParse(Object.fromEntries((await request.formData()).entries())); if (!parsed.success) return NextResponse.json({ error: "Please check the listing details." }, { status: 400 }); try { const seller = await prisma.user.findUnique({ where: { email: session.user.email } }); if (!seller) return NextResponse.json({ error: "Seller account not found." }, { status: 401 }); const car = await prisma.car.create({ data: { ...parsed.data, sellerId: seller.id } }); return NextResponse.redirect(new URL(`/cars/${car.id}`, request.url)); } catch { return NextResponse.json({ error: "Could not publish listing. Check your database setup." }, { status: 503 }); } }

@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+const schema = z.object({ carId: z.string().min(1), name: z.string().min(2).max(100), email: z.string().email(), message: z.string().min(5).max(2000) });
+export async function POST(request: Request) { const type = request.headers.get("content-type") || ""; const raw = type.includes("application/json") ? await request.json() : Object.fromEntries((await request.formData()).entries()); const parsed = schema.safeParse(raw); if (!parsed.success) return NextResponse.json({ error: "Please check your inquiry details." }, { status: 400 }); try { const inquiry = await prisma.inquiry.create({ data: parsed.data }); return type.includes("application/json") ? NextResponse.json({ ok: true, id: inquiry.id }, { status: 201 }) : NextResponse.redirect(new URL(`/cars/${parsed.data.carId}?sent=1`, request.url)); } catch { return NextResponse.json({ error: "Could not save your inquiry. Set up the database and try again." }, { status: 503 }); } }

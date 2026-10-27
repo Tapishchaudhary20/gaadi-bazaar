@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  createdAt DateTime @default(now())
+  cars Car[]
+  inquiries Inquiry[]
+}
+model Car {
+  id String @id @default(cuid())
+  title String
+  make String
+  model String
+  year Int
+  price Int
+  mileage Int
+  location String
+  transmission String
+  fuel String
+  description String
+  images String
+  featured Boolean @default(false)
+  createdAt DateTime @default(now())
+  sellerId String
+  seller User @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  inquiries Inquiry[]
+  @@index([make, year, price])
+}
+model Inquiry {
+  id String @id @default(cuid())
+  name String
+  email String
+  message String
+  createdAt DateTime @default(now())
+  carId String
+  buyerId String?
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
+  buyer User? @relation(fields: [buyerId], references: [id], onDelete: SetNull)
+}
